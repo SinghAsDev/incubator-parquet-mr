@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.parquet.Log;
+import org.apache.parquet.Version;
 import org.apache.parquet.bytes.BytesInput;
 import org.apache.parquet.bytes.ConcatenatingByteArrayCollector;
 import org.apache.parquet.column.ColumnDescriptor;
@@ -95,6 +96,7 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
       }
       tempOutputStream.reset();
       parquetMetadataConverter.writeDataPageHeader(
+          Version.FULL_VERSION,
           (int)uncompressedSize,
           (int)compressedSize,
           valueCount,
@@ -134,6 +136,7 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
       );
       tempOutputStream.reset();
       parquetMetadataConverter.writeDataPageV2Header(
+          Version.FULL_VERSION,
           uncompressedSize, compressedSize,
           valueCount, nullCount, rowCount,
           statistics,

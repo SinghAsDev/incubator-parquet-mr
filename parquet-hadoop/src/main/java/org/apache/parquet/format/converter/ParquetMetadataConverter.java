@@ -69,6 +69,7 @@ import org.apache.parquet.schema.Types;
 
 public class ParquetMetadataConverter {
   private static final Log LOG = Log.getLog(ParquetMetadataConverter.class);
+  private static final int STATISTICS_FIXED_VERSION = 161; // 1.6.1
 
   public FileMetaData toParquetMetadata(int currentVersion, ParquetMetadata parquetMetadata) {
     List<BlockMetaData> blocks = parquetMetadata.getBlocks();
@@ -164,7 +165,9 @@ public class ParquetMetadataConverter {
           columnMetaData.getFirstDataPageOffset());
       columnChunk.meta_data.dictionary_page_offset = columnMetaData.getDictionaryPageOffset();
       if (!columnMetaData.getStatistics().isEmpty()) {
-        columnChunk.meta_data.setStatistics(toParquetStatistics(columnMetaData.getStatistics()));
+        columnChunk.meta_data.setStatistics(
+            toParquetStatistics(
+                parquetMetadata.getFileMetaData().getCreatedBy(), columnMetaData.getStatistics()));
       }
 //      columnChunk.meta_data.index_page_offset = ;
 //      columnChunk.meta_data.key_value_metadata = ; // nothing yet
@@ -234,16 +237,36 @@ public class ParquetMetadataConverter {
     return Encoding.valueOf(encoding.name());
   }
 
-  public static Statistics toParquetStatistics(org.apache.parquet.column.statistics.Statistics statistics) {
+  public static Statistics toParquetStatistics(
+      String createdBy, org.apache.parquet.column.statistics.Statistics statistics) {
     Statistics stats = new Statistics();
     if (!statistics.isEmpty()) {
       stats.setNull_count(statistics.getNumNulls());
-      if(statistics.hasNonNullValue()) {
+      if (statistics.hasNonNullValue() &&
+          createdBy != null &&
+          !shouldIgnoreStatistics(createdBy)) {
         stats.setMax(statistics.getMaxBytes());
         stats.setMin(statistics.getMinBytes());
-     }
+      }
     }
     return stats;
+  }
+
+  private static boolean shouldIgnoreStatistics(String createdBy) {
+    final String[] versionTokens = createdBy.split(" ");
+
+    if (versionTokens.length < 3) {
+      return true;
+    }
+
+    final String app = versionTokens[0];
+    final String version = versionTokens[2].substring(0, 5).replaceAll("\\.", "");
+
+    if (app.equalsIgnoreCase("parquet-mr")) {
+      return Integer.parseInt(version) < STATISTICS_FIXED_VERSION;
+    }
+
+    return true;
   }
 
   public static org.apache.parquet.column.statistics.Statistics fromParquetStatistics(Statistics statistics, PrimitiveTypeName type) {
@@ -514,10 +537,12 @@ public class ParquetMetadataConverter {
       public FileMetaData visit(NoFilter filter) throws IOException {
         return readFileMetaData(from);
       }
+
       @Override
       public FileMetaData visit(SkipMetadataFilter filter) throws IOException {
         return readFileMetaData(from, true);
       }
+
       @Override
       public FileMetaData visit(RangeMetadataFilter filter) throws IOException {
         return filterFileMetaData(readFileMetaData(from), filter);
@@ -641,6 +666,7 @@ public class ParquetMetadataConverter {
 
   @Deprecated
   public void writeDataPageHeader(
+      String createdBy,
       int uncompressedSize,
       int compressedSize,
       int valueCount,
@@ -648,7 +674,8 @@ public class ParquetMetadataConverter {
       org.apache.parquet.column.Encoding dlEncoding,
       org.apache.parquet.column.Encoding valuesEncoding,
       OutputStream to) throws IOException {
-    writePageHeader(newDataPageHeader(uncompressedSize,
+    writePageHeader(newDataPageHeader(createdBy,
+                                      uncompressedSize,
                                       compressedSize,
                                       valueCount,
                                       new org.apache.parquet.column.statistics.BooleanStatistics(),
@@ -658,6 +685,7 @@ public class ParquetMetadataConverter {
   }
 
   public void writeDataPageHeader(
+      String createdBy,
       int uncompressedSize,
       int compressedSize,
       int valueCount,
@@ -666,10 +694,14 @@ public class ParquetMetadataConverter {
       org.apache.parquet.column.Encoding dlEncoding,
       org.apache.parquet.column.Encoding valuesEncoding,
       OutputStream to) throws IOException {
-    writePageHeader(newDataPageHeader(uncompressedSize, compressedSize, valueCount, statistics, rlEncoding, dlEncoding, valuesEncoding), to);
+    writePageHeader(
+        newDataPageHeader(createdBy, uncompressedSize, compressedSize, valueCount, statistics,
+            rlEncoding, dlEncoding, valuesEncoding),
+        to);
   }
 
   private PageHeader newDataPageHeader(
+      String createdBy,
       int uncompressedSize, int compressedSize,
       int valueCount,
       org.apache.parquet.column.statistics.Statistics statistics,
@@ -684,12 +716,14 @@ public class ParquetMetadataConverter {
         getEncoding(dlEncoding),
         getEncoding(rlEncoding)));
     if (!statistics.isEmpty()) {
-      pageHeader.getData_page_header().setStatistics(toParquetStatistics(statistics));
+      pageHeader.getData_page_header().setStatistics(
+          toParquetStatistics(createdBy, statistics));
     }
     return pageHeader;
   }
 
   public void writeDataPageV2Header(
+      String createdBy,
       int uncompressedSize, int compressedSize,
       int valueCount, int nullCount, int rowCount,
       org.apache.parquet.column.statistics.Statistics statistics,
@@ -698,6 +732,7 @@ public class ParquetMetadataConverter {
       OutputStream to) throws IOException {
     writePageHeader(
         newDataPageV2Header(
+            createdBy,
             uncompressedSize, compressedSize,
             valueCount, nullCount, rowCount,
             statistics,
@@ -706,6 +741,7 @@ public class ParquetMetadataConverter {
   }
 
   private PageHeader newDataPageV2Header(
+      String createdBy,
       int uncompressedSize, int compressedSize,
       int valueCount, int nullCount, int rowCount,
       org.apache.parquet.column.statistics.Statistics<?> statistics,
@@ -717,7 +753,8 @@ public class ParquetMetadataConverter {
         getEncoding(dataEncoding),
         dlByteLength, rlByteLength);
     if (!statistics.isEmpty()) {
-      dataPageHeaderV2.setStatistics(toParquetStatistics(statistics));
+      dataPageHeaderV2.setStatistics(
+          toParquetStatistics(createdBy, statistics));
     }
     PageHeader pageHeader = new PageHeader(PageType.DATA_PAGE_V2, uncompressedSize, compressedSize);
     pageHeader.setData_page_header_v2(dataPageHeaderV2);
