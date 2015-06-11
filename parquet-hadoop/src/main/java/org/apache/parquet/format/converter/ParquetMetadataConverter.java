@@ -69,7 +69,7 @@ import org.apache.parquet.schema.Types;
 
 public class ParquetMetadataConverter {
   private static final Log LOG = Log.getLog(ParquetMetadataConverter.class);
-  private static final int STATISTICS_FIXED_VERSION = 161; // 1.6.1
+  private static final int STATISTICS_FIXED_VERSION = 180; // 1.8.0
 
   public FileMetaData toParquetMetadata(int currentVersion, ParquetMetadata parquetMetadata) {
     List<BlockMetaData> blocks = parquetMetadata.getBlocks();
@@ -237,6 +237,16 @@ public class ParquetMetadataConverter {
     return Encoding.valueOf(encoding.name());
   }
 
+  /**
+   * @deprecated Replaced by {@link #toParquetStatistics(
+   * String createdBy, org.apache.parquet.column.statistics.Statistics statistics)}
+   */
+  @Deprecated
+  public static Statistics toParquetStatistics(
+      org.apache.parquet.column.statistics.Statistics statistics) {
+    return toParquetStatistics(null, statistics);
+  }
+
   public static Statistics toParquetStatistics(
       String createdBy, org.apache.parquet.column.statistics.Statistics statistics) {
     Statistics stats = new Statistics();
@@ -253,20 +263,25 @@ public class ParquetMetadataConverter {
   }
 
   private static boolean shouldIgnoreStatistics(String createdBy) {
+    if (!createdBy.startsWith("parquet-mr")) {
+      return false; // Assume that other implementations got the statistics correct
+    }
+
+    return parseVersion(createdBy) < STATISTICS_FIXED_VERSION;
+  }
+
+  private static int parseVersion(String createdBy) {
     final String[] versionTokens = createdBy.split(" ");
 
     if (versionTokens.length < 3) {
-      return true;
+      return -1; // Ignore statistics
     }
 
-    final String app = versionTokens[0];
-    final String version = versionTokens[2].substring(0, 5).replaceAll("\\.", "");
-
-    if (app.equalsIgnoreCase("parquet-mr")) {
-      return Integer.parseInt(version) < STATISTICS_FIXED_VERSION;
+    try {
+      return Integer.parseInt(versionTokens[2].substring(0, 5).replaceAll("\\.", ""));
+    } catch (NumberFormatException ex) {
+      return -1; // Ignore statistics
     }
-
-    return true;
   }
 
   public static org.apache.parquet.column.statistics.Statistics fromParquetStatistics(Statistics statistics, PrimitiveTypeName type) {
