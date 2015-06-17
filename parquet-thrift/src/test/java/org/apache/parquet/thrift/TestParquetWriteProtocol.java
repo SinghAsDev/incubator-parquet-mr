@@ -517,6 +517,38 @@ public class TestParquetWriteProtocol {
    validateThrift(thriftExpectations, a);
   }
 
+  @Test
+  public void testNameThreeLevelList() throws TException {
+    final List<String> names = new ArrayList<String>();
+    names.add("John");
+    names.add("Jack");
+    final TestNameList o = new TestNameList("name", names);
+
+    String[] expectations = {
+        "startMessage()",
+          "startField(name, 0)",
+            "addBinary(name)",
+          "endField(name, 0)",
+          "startField(names, 1)",
+            "startGroup()",
+              "startField(list, 0)",
+                "startGroup()",
+                  "startField(element, 0)",
+                    "addBinary(John)",
+                  "endField(element, 0)",
+                "endGroup()",
+                "startGroup()",
+                  "startField(element, 0)",
+                    "addBinary(Jack)",
+                  "endField(element, 0)",
+                "endGroup()",
+              "endField(list, 0)",
+            "endGroup()",
+          "endField(names, 1)",
+        "endMessage()"};
+    validateThrift(expectations, o);
+  }
+
   private void validateThrift(String[] expectations, TBase<?, ?> a)
       throws TException {
     final ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter();

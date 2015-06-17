@@ -53,6 +53,7 @@ import org.apache.parquet.thrift.struct.ThriftType.StructType;
 import org.apache.parquet.thrift.struct.ThriftType.StructType.StructOrUnionType;
 
 import static org.apache.parquet.Preconditions.checkNotNull;
+import static org.apache.parquet.schema.ConversionPatterns.listOfElements;
 import static org.apache.parquet.schema.ConversionPatterns.listType;
 import static org.apache.parquet.schema.ConversionPatterns.mapType;
 import static org.apache.parquet.schema.OriginalType.ENUM;
@@ -172,7 +173,12 @@ public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<Conver
   }
 
   private ConvertedField visitListLike(ThriftField listLike, State state, boolean isSet) {
-    State childState = new State(state.path, REPEATED, state.name + "_tuple");
+    State childState;
+    if (false) { //writeNewListElement
+      childState = new State(state.path, REQUIRED, "element");
+    } else {
+      childState = new State(state.path, REPEATED, state.name + "_tuple");
+    }
 
     ConvertedField converted = listLike.getType().accept(this, childState);
 
@@ -188,7 +194,13 @@ public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<Conver
         }
       }
 
-      return new Keep(state.path, listType(state.repetition, state.name, converted.asKeep().getType()));
+      if (false) { //writeNewListElement
+        return new Keep(
+            state.path, listOfElements(state.repetition, state.name, converted.asKeep().getType()));
+      } else {
+        return new Keep(
+            state.path, listType(state.repetition, state.name, converted.asKeep().getType()));
+      }
     }
 
     return new Drop(state.path);
