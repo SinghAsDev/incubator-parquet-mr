@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.twitter.elephantbird.thrift.test.TestMapInList;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.ComparisonFailure;
 import thrift.test.OneOfEach;
 
@@ -47,8 +49,6 @@ import org.apache.parquet.io.RecordConsumerLoggingWrapper;
 import org.apache.parquet.pig.PigSchemaConverter;
 import org.apache.parquet.pig.TupleWriteSupport;
 import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.thrift.ParquetWriteProtocol;
-import org.apache.parquet.thrift.ThriftSchemaConverter;
 import org.apache.parquet.thrift.struct.ThriftType.StructType;
 
 import com.twitter.data.proto.tutorial.thrift.AddressBook;
@@ -68,6 +68,7 @@ import com.twitter.elephantbird.thrift.test.TestStructInMap;
 
 public class TestParquetWriteProtocol {
   private static final Log LOG = Log.getLog(TestParquetWriteProtocol.class);
+  private static final String WRITE_THREE_LEVEL_LISTS = "parquet.thrift.write-three-level-lists";
   @Test
   public void testMap() throws Exception {
     String[] expectations = {
@@ -546,12 +547,86 @@ public class TestParquetWriteProtocol {
             "endGroup()",
           "endField(names, 1)",
         "endMessage()"};
-    validateThrift(expectations, o);
+    Configuration conf = new Configuration();
+    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    validateThrift(conf, expectations, o);
+  }
+
+  @Test
+  public void testListOfMapThreeLevelList() throws TException {
+    Map<String, String> map1 = new HashMap<String,String>();
+    map1.put("key11", "value11");
+    map1.put("key12", "value12");
+    Map<String, String> map2 = new HashMap<String,String>();
+    map2.put("key21", "value21");
+    final TestMapInList listMap = new TestMapInList("listmap",
+        Arrays.asList(map1, map2));
+
+    String[] expectations = {
+        "startMessage()",
+          "startField(name, 0)",
+            "addBinary(listmap)",
+          "endField(name, 0)",
+          "startField(names, 1)",
+            "startGroup()",
+              "startField(list, 0)",
+                "startGroup()",
+                  "startField(element, 0)",
+                    "startGroup()",
+                      "startField(map, 0)",
+                        "startGroup()",
+                          "startField(key, 0)",
+                            "addBinary(key12)",
+                          "endField(key, 0)",
+                          "startField(value, 1)",
+                            "addBinary(value12)",
+                          "endField(value, 1)",
+                        "endGroup()",
+                        "startGroup()",
+                          "startField(key, 0)",
+                            "addBinary(key11)",
+                          "endField(key, 0)",
+                          "startField(value, 1)",
+                            "addBinary(value11)",
+                          "endField(value, 1)",
+                        "endGroup()",
+                      "endField(map, 0)",
+                    "endGroup()",
+                  "endField(element, 0)",
+                "endGroup()",
+                "startGroup()",
+                  "startField(element, 0)",
+                    "startGroup()",
+                      "startField(map, 0)",
+                        "startGroup()",
+                          "startField(key, 0)",
+                            "addBinary(key21)",
+                          "endField(key, 0)",
+                          "startField(value, 1)",
+                            "addBinary(value21)",
+                          "endField(value, 1)",
+                        "endGroup()",
+                      "endField(map, 0)",
+                    "endGroup()",
+                  "endField(element, 0)",
+                "endGroup()",
+              "endField(list, 0)",
+            "endGroup()",
+          "endField(names, 1)",
+        "endMessage()"};
+    Configuration conf = new Configuration();
+    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    validateThrift(conf, expectations, listMap);
   }
 
   private void validateThrift(String[] expectations, TBase<?, ?> a)
       throws TException {
-    final ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter();
+    validateThrift(null, expectations, a);
+  }
+
+  private void validateThrift(Configuration configuration, String[] expectations, TBase<?, ?> a)
+      throws TException {
+    final ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter(configuration);
 //      System.out.println(a);
     final Class<TBase<?,?>> class1 = (Class<TBase<?,?>>)a.getClass();
     final MessageType schema = thriftSchemaConverter.convert(class1);
@@ -559,7 +634,8 @@ public class TestParquetWriteProtocol {
     final StructType structType = thriftSchemaConverter.toStructType(class1);
     ExpectationValidatingRecordConsumer recordConsumer = new ExpectationValidatingRecordConsumer(new ArrayDeque<String>(Arrays.asList(expectations)));
     final MessageColumnIO columnIO = new ColumnIOFactory().getColumnIO(schema);
-    ParquetWriteProtocol p = new ParquetWriteProtocol(new RecordConsumerLoggingWrapper(recordConsumer), columnIO, structType);
+    ParquetWriteProtocol p = new ParquetWriteProtocol(
+        configuration, new RecordConsumerLoggingWrapper(recordConsumer), columnIO, structType);
     a.write(p);
   }
 

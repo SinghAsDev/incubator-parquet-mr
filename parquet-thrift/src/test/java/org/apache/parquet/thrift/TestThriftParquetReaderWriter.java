@@ -37,9 +37,12 @@ import com.twitter.data.proto.tutorial.thrift.PhoneNumber;
 
 public class TestThriftParquetReaderWriter {
 
+  private static final String WRITE_THREE_LEVEL_LISTS = "parquet.thrift.write-three-level-lists";
+
   @Test
   public void testWriteRead() throws IOException {
     Configuration configuration = new Configuration();
+    configuration.set(WRITE_THREE_LEVEL_LISTS, "true");
     Path f = new Path("target/test/TestThriftParquetReaderWriter");
     FileSystem fs = f.getFileSystem(configuration);
     if (fs.exists(f)) {

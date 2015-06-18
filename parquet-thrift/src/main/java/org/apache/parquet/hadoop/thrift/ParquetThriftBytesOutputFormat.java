@@ -18,6 +18,7 @@
  */
 package org.apache.parquet.hadoop.thrift;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.thrift.TBase;
@@ -66,8 +67,13 @@ public class ParquetThriftBytesOutputFormat extends ParquetOutputFormat<BytesWri
    * @param buffered whether we should buffer each record
    * @param errorHandler handle record corruption and schema incompatible exception
    */
-  public ParquetThriftBytesOutputFormat(TProtocolFactory protocolFactory, Class<? extends TBase<?, ?>> thriftClass, boolean buffered, FieldIgnoredHandler errorHandler) {
-    super(new ThriftBytesWriteSupport(protocolFactory, thriftClass, buffered, errorHandler));
+  public ParquetThriftBytesOutputFormat(Configuration configuration,
+                                        TProtocolFactory protocolFactory,
+                                        Class<? extends TBase<?, ?>> thriftClass,
+                                        boolean buffered,
+                                        FieldIgnoredHandler errorHandler) {
+    super(new ThriftBytesWriteSupport(
+        configuration, protocolFactory, thriftClass, buffered, errorHandler));
   }
 
 }

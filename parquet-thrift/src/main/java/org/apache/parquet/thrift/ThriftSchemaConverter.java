@@ -20,6 +20,8 @@ package org.apache.parquet.thrift;
 
 import com.twitter.elephantbird.thrift.TStructDescriptor;
 import com.twitter.elephantbird.thrift.TStructDescriptor.Field;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TEnum;
 import org.apache.thrift.TUnion;
@@ -43,9 +45,21 @@ import java.util.List;
  */
 public class ThriftSchemaConverter {
   private final FieldProjectionFilter fieldProjectionFilter;
+  Configuration conf;
 
   public ThriftSchemaConverter() {
     this(FieldProjectionFilter.ALL_COLUMNS);
+  }
+
+  public ThriftSchemaConverter(Configuration configuration) {
+    this();
+    conf = configuration;
+  }
+
+  public ThriftSchemaConverter(
+      Configuration configuration, FieldProjectionFilter fieldProjectionFilter) {
+    this(fieldProjectionFilter);
+    conf = configuration;
   }
 
   public ThriftSchemaConverter(FieldProjectionFilter fieldProjectionFilter) {
@@ -57,7 +71,8 @@ public class ThriftSchemaConverter {
   }
 
   public MessageType convert(StructType struct) {
-    MessageType messageType = ThriftSchemaConvertVisitor.convert(struct, fieldProjectionFilter);
+    MessageType messageType = ThriftSchemaConvertVisitor.convert(
+        conf, struct, fieldProjectionFilter);
     fieldProjectionFilter.assertNoUnmatchedPatterns();
     return messageType;
   }

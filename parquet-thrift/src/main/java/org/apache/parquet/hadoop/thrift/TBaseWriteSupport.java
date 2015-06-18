@@ -25,7 +25,10 @@ import org.apache.parquet.thrift.struct.ThriftType.StructType;
 
 public class TBaseWriteSupport<T extends TBase<?, ?>> extends AbstractThriftWriteSupport<T> {
 
+  private static Configuration conf;
+
   public static <U extends TBase<?,?>> void setThriftClass(Configuration configuration, Class<U> thriftClass) {
+    conf = configuration;
     AbstractThriftWriteSupport.setGenericThriftClass(configuration, thriftClass);
   }
 
@@ -47,7 +50,7 @@ public class TBaseWriteSupport<T extends TBase<?, ?>> extends AbstractThriftWrit
 
   @Override
   protected StructType getThriftStruct() {
-    ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter();
+    ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter(conf);
     return thriftSchemaConverter.toStructType((Class<TBase<?, ?>>)thriftClass);
   }
 

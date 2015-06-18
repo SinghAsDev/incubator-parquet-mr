@@ -21,6 +21,7 @@ package org.apache.parquet.thrift;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.ShouldNeverHappenException;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
@@ -77,16 +78,30 @@ import static org.apache.parquet.schema.Types.primitive;
 public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<ConvertedField, ThriftSchemaConvertVisitor.State> {
   private final FieldProjectionFilter fieldProjectionFilter;
   private final boolean doProjection;
+  private boolean writeThreeLevelList = ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS_DEFAULT;
 
-  private ThriftSchemaConvertVisitor(FieldProjectionFilter fieldProjectionFilter, boolean doProjection) {
-    this.fieldProjectionFilter = checkNotNull(fieldProjectionFilter, "fieldProjectionFilter");
-    this.doProjection = doProjection;
+  private ThriftSchemaConvertVisitor(
+      FieldProjectionFilter fieldProjectionFilter, boolean doProjection) {
+    this(fieldProjectionFilter, doProjection, null);
   }
 
-  public static MessageType convert(StructType struct, FieldProjectionFilter filter) {
+  private ThriftSchemaConvertVisitor(
+      FieldProjectionFilter fieldProjectionFilter, boolean doProjection, Configuration configuration) {
+    this.fieldProjectionFilter = checkNotNull(fieldProjectionFilter, "fieldProjectionFilter");
+    this.doProjection = doProjection;
+    if (configuration != null) {
+      this.writeThreeLevelList = configuration.getBoolean(
+          ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS,
+          ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS_DEFAULT);
+    }
+  }
+
+  public static MessageType convert(
+      Configuration conf, StructType struct, FieldProjectionFilter filter) {
     State state = new State(new FieldsPath(), REPEATED, "ParquetSchema");
 
-    ConvertedField converted = struct.accept(new ThriftSchemaConvertVisitor(filter, true), state);
+    ConvertedField converted = struct.accept(new ThriftSchemaConvertVisitor(filter, true, conf),
+        state);
 
     if (!converted.isKeep()) {
       throw new ThriftProjectionException("No columns have been selected");
@@ -174,7 +189,7 @@ public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<Conver
 
   private ConvertedField visitListLike(ThriftField listLike, State state, boolean isSet) {
     State childState;
-    if (false) { //writeNewListElement
+    if (writeThreeLevelList) {
       childState = new State(state.path, REQUIRED, "element");
     } else {
       childState = new State(state.path, REPEATED, state.name + "_tuple");
@@ -194,7 +209,7 @@ public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<Conver
         }
       }
 
-      if (false) { //writeNewListElement
+      if (writeThreeLevelList) {
         return new Keep(
             state.path, listOfElements(state.repetition, state.name, converted.asKeep().getType()));
       } else {

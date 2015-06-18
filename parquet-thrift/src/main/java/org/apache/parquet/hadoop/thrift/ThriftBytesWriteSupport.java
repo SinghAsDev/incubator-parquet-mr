@@ -75,14 +75,21 @@ public class ThriftBytesWriteSupport extends WriteSupport<BytesWritable> {
   private StructType thriftStruct;
   private ParquetWriteProtocol parquetWriteProtocol;
   private final FieldIgnoredHandler errorHandler;
+  private Configuration configuration;
 
   public ThriftBytesWriteSupport() {
     this.buffered = true;
     this.errorHandler = null;
   }
 
-  public ThriftBytesWriteSupport(TProtocolFactory protocolFactory, Class<? extends TBase<?, ?>> thriftClass, boolean buffered, FieldIgnoredHandler errorHandler) {
+  public ThriftBytesWriteSupport(
+      Configuration configuration,
+      TProtocolFactory protocolFactory,
+      Class<? extends TBase<?, ?>> thriftClass,
+      boolean buffered,
+      FieldIgnoredHandler errorHandler) {
     super();
+    this.configuration = configuration;
     this.protocolFactory = protocolFactory;
     this.thriftClass = thriftClass;
     this.buffered = buffered;
@@ -94,6 +101,7 @@ public class ThriftBytesWriteSupport extends WriteSupport<BytesWritable> {
 
   @Override
   public WriteContext init(Configuration configuration) {
+    this.configuration = configuration;
     if (this.protocolFactory == null) {
       try {
         this.protocolFactory = getTProtocolFactoryClass(configuration).newInstance();
@@ -108,7 +116,7 @@ public class ThriftBytesWriteSupport extends WriteSupport<BytesWritable> {
     } else {
       thriftClass = TBaseWriteSupport.getThriftClass(configuration);
     }
-    ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter();
+    ThriftSchemaConverter thriftSchemaConverter = new ThriftSchemaConverter(this.configuration);
     this.thriftStruct = thriftSchemaConverter.toStructType(thriftClass);
     this.schema = thriftSchemaConverter.convert(thriftStruct);
     if (buffered) {
@@ -146,7 +154,8 @@ public class ThriftBytesWriteSupport extends WriteSupport<BytesWritable> {
   @Override
   public void prepareForWrite(RecordConsumer recordConsumer) {
     final MessageColumnIO columnIO = new ColumnIOFactory().getColumnIO(schema);
-    this.parquetWriteProtocol = new ParquetWriteProtocol(recordConsumer, columnIO, thriftStruct);
+    this.parquetWriteProtocol = new ParquetWriteProtocol(
+        this.configuration, recordConsumer, columnIO, thriftStruct);
     thriftWriteSupport.prepareForWrite(recordConsumer);
   }
 
