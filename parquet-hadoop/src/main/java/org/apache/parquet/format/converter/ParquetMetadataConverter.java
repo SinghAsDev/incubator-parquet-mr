@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IllegalFormatException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +71,9 @@ import org.apache.parquet.schema.Types;
 
 public class ParquetMetadataConverter {
   private static final Log LOG = Log.getLog(ParquetMetadataConverter.class);
-  private static final String STATISTICS_FIXED_VERSION = "1.8.0";
+  private static final int STATISTICS_FIXED_VERSION_MAJOR = 1;
+  private static final int STATISTICS_FIXED_VERSION_MINOR = 8;
+  private static final int STATISTICS_FIXED_VERSION_BUILD = 0;
 
   public FileMetaData toParquetMetadata(int currentVersion, ParquetMetadata parquetMetadata) {
     List<BlockMetaData> blocks = parquetMetadata.getBlocks();
@@ -285,7 +286,7 @@ public class ParquetMetadataConverter {
     }
 
     try {
-      return isVersionLessThan(versionTokens[2], STATISTICS_FIXED_VERSION);
+      return isVersionPriorToStatsFixedVersion(versionTokens[2]);
     } catch (NumberFormatException ex) {
       return true; // Ignore statistics
     } catch (IllegalArgumentException ex) {
@@ -293,43 +294,26 @@ public class ParquetMetadataConverter {
     }
   }
 
-  private static boolean isVersionLessThan(String version1, String version2)
-      throws IllegalArgumentException, NumberFormatException {
-    int major1;
-    int minor1;
-    int build1;
-    int rcVersion1;
+  private static boolean isVersionPriorToStatsFixedVersion(String version)
+      throws IllegalArgumentException {
+    int major;
+    int minor;
+    int build;
 
     Pattern pattern = Pattern.compile("^(\\d+).(\\d+).(\\d+)(rc)?(\\d+)?(\\-|\\w)*$");
-    Matcher matcher = pattern.matcher(version1);
+    Matcher matcher = pattern.matcher(version);
     if (matcher.find()) {
-      major1 = Integer.parseInt(matcher.group(1));
-      minor1 = Integer.parseInt(matcher.group(2));
-      build1 = Integer.parseInt(matcher.group(3));
-      rcVersion1 = Integer.parseInt(matcher.group(5));
+      major = Integer.parseInt(matcher.group(1));
+      minor = Integer.parseInt(matcher.group(2));
+      build = Integer.parseInt(matcher.group(3));
     } else {
-      throw new IllegalArgumentException(version1 + " is not a proper version string");
+      throw new IllegalArgumentException(version + " is not a proper version string");
     }
 
-    int major2;
-    int minor2;
-    int build2;
-    int rcVersion2;
-
-    matcher = pattern.matcher(version2);
-    if (matcher.find()) {
-      major2 = Integer.parseInt(matcher.group(1));
-      minor2 = Integer.parseInt(matcher.group(2));
-      build2 = Integer.parseInt(matcher.group(3));
-      rcVersion2 = Integer.parseInt(matcher.group(5));
-    } else {
-      throw new IllegalArgumentException(version2 + " is not a proper version string");
-    }
-
-    return (major1 < major2) ||
-        (major1 == major2 && minor1 < minor2) ||
-        (major1 == major2 && minor1 == minor2 && build1 < build2) ||
-        (major1 == major2 && minor1 == minor2 && build1 == build2 && rcVersion1 < rcVersion2);
+    return (major < STATISTICS_FIXED_VERSION_MAJOR) ||
+        (major == STATISTICS_FIXED_VERSION_MAJOR && minor < STATISTICS_FIXED_VERSION_MINOR) ||
+        (major == STATISTICS_FIXED_VERSION_MAJOR && minor == STATISTICS_FIXED_VERSION_MINOR &&
+            build < STATISTICS_FIXED_VERSION_BUILD);
   }
 
   public PrimitiveTypeName getPrimitive(Type type) {
