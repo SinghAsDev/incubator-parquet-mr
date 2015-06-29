@@ -18,6 +18,7 @@
  */
 package org.apache.parquet.scrooge;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.thrift.ThriftReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.thrift.ThriftSchemaConverter;
@@ -41,5 +42,11 @@ public class ScroogeReadSupport extends ThriftReadSupport{
   protected MessageType getProjectedSchema(FieldProjectionFilter fieldProjectionFilter) {
     ThriftType.StructType thriftStruct = new ScroogeStructConverter().convert(thriftClass);
     return new ThriftSchemaConverter(fieldProjectionFilter).convert(thriftStruct);
+  }
+
+  @Override
+  protected MessageType getProjectedSchema(Configuration configuration, FieldProjectionFilter fieldProjectionFilter) {
+    ThriftType.StructType thriftStruct = new ScroogeStructConverter().convert(thriftClass);
+    return new ThriftSchemaConverter(configuration, fieldProjectionFilter).convert(thriftStruct);
   }
 }
