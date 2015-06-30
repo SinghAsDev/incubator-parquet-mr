@@ -45,7 +45,8 @@ import java.util.List;
  */
 public class ThriftSchemaConverter {
   private final FieldProjectionFilter fieldProjectionFilter;
-  Configuration conf;
+
+  private Configuration conf;
 
   public ThriftSchemaConverter() {
     this(FieldProjectionFilter.ALL_COLUMNS);

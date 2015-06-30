@@ -182,12 +182,6 @@ public class ThriftReadSupport<T> extends ReadSupport<T> {
   }
 
   @SuppressWarnings("unchecked")
-  protected MessageType getProjectedSchema(FieldProjectionFilter
-      fieldProjectionFilter) {
-    return getProjectedSchema(null, fieldProjectionFilter);
-  }
-
-  @SuppressWarnings("unchecked")
   protected MessageType getProjectedSchema(Configuration configuration, FieldProjectionFilter
       fieldProjectionFilter) {
     return new ThriftSchemaConverter(configuration, fieldProjectionFilter)

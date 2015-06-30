@@ -62,8 +62,9 @@ public class ParquetThriftBytesOutputFormat extends ParquetOutputFormat<BytesWri
    *  when catching an exception the record can be discarded.
    *  The non-buffered implementation will stream field by field. Exceptions are unrecoverable and the file must be closed when an invalid record is written.
    *
+   * @param configuration configuration
    * @param protocolFactory the protocol factory to use to read the bytes
-   * @param thriftClass thriftClass the class to exctract the schema from
+   * @param thriftClass thriftClass the class to extract the schema from
    * @param buffered whether we should buffer each record
    * @param errorHandler handle record corruption and schema incompatible exception
    */

@@ -68,7 +68,6 @@ import com.twitter.elephantbird.thrift.test.TestStructInMap;
 
 public class TestParquetWriteProtocol {
   private static final Log LOG = Log.getLog(TestParquetWriteProtocol.class);
-  private static final String WRITE_THREE_LEVEL_LISTS = "parquet.thrift.write-three-level-lists";
   @Test
   public void testMap() throws Exception {
     String[] expectations = {
@@ -548,7 +547,7 @@ public class TestParquetWriteProtocol {
           "endField(names, 1)",
         "endMessage()"};
     Configuration conf = new Configuration();
-    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    conf.set(ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS, "true");
     validateThrift(conf, expectations, o);
   }
 
@@ -615,7 +614,7 @@ public class TestParquetWriteProtocol {
           "endField(names, 1)",
         "endMessage()"};
     Configuration conf = new Configuration();
-    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    conf.set(ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS, "true");
     validateThrift(conf, expectations, listMap);
   }
 

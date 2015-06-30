@@ -34,9 +34,7 @@ import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
 import org.apache.parquet.hadoop.util.ContextUtil;
 import org.apache.parquet.io.api.Binary;
-import org.apache.parquet.schema.PrimitiveType;
-import org.apache.parquet.schema.Type;
-import org.apache.parquet.schema.Types;
+import org.apache.parquet.thrift.ParquetWriteProtocol;
 import org.apache.parquet.thrift.test.RequiredPrimitiveFixture;
 import org.apache.parquet.thrift.test.TestListsInMap;
 
@@ -70,8 +68,8 @@ import com.twitter.elephantbird.thrift.test.TestMapInList;
 import org.apache.parquet.schema.MessageType;
 
 public class TestThriftToParquetFileWriter {
-  private static final Log LOG = Log.getLog(TestThriftToParquetFileWriter.class);
-  private static final String WRITE_THREE_LEVEL_LISTS = "parquet.thrift.write-three-level-lists";
+  private static final Log LOG = Log
+      .getLog(TestThriftToParquetFileWriter.class);
 
   @Test
   public void testWriteFile() throws IOException, InterruptedException, TException {
@@ -83,7 +81,7 @@ public class TestThriftToParquetFileWriter {
                 "bob.roberts@example.com",
                 Arrays.asList(new PhoneNumber("1234567890")))));
 
-    final Path fileToCreate = createFile(a);
+    final Path fileToCreate = createFile(null, a);
 
     ParquetReader<Group> reader = createRecordReader(fileToCreate);
 
@@ -113,7 +111,8 @@ public class TestThriftToParquetFileWriter {
       boolStats.setMinMax(false, true);
 
       //write rows to a file
-      Path p = createFile(new RequiredPrimitiveFixture(false, (byte)32, (short)32, 2, 90l, -15.55d, "as"),
+      Path p = createFile(null,
+                          new RequiredPrimitiveFixture(false, (byte)32, (short)32, 2, 90l, -15.55d, "as"),
                           new RequiredPrimitiveFixture(false, (byte)100, (short)100, 100, 287l, -9.0d, "world"),
                           new RequiredPrimitiveFixture(true, (byte)2, (short)2, 9, -17l, 9.63d, "hello"));
       final Configuration configuration = new Configuration();
@@ -154,7 +153,8 @@ public class TestThriftToParquetFileWriter {
       binaryStatsLarge.setMinMax(Binary.fromString("some small string"),
                                  Binary.fromString("some very large string here to test in this function"));
       //write rows to a file
-      Path p_large = createFile(new RequiredPrimitiveFixture(false, (byte)2, (short)32, -Integer.MAX_VALUE,
+      Path p_large = createFile(null,
+                                new RequiredPrimitiveFixture(false, (byte)2, (short)32, -Integer.MAX_VALUE,
                                                             -Long.MAX_VALUE, -Double.MAX_VALUE, "some small string"),
                                 new RequiredPrimitiveFixture(false, (byte)100, (short)100, Integer.MAX_VALUE,
                                                              Long.MAX_VALUE, Double.MAX_VALUE,
@@ -203,7 +203,7 @@ public class TestThriftToParquetFileWriter {
     final TestMapInList listMap = new TestMapInList("listmap",
         Arrays.asList(map1, map2));
 
-    final Path fileToCreate = createFile(listMap);
+    final Path fileToCreate = createFile(null, listMap);
 
     ParquetReader<Group> reader = createRecordReader(fileToCreate);
 
@@ -223,16 +223,16 @@ public class TestThriftToParquetFileWriter {
     Map<String, List<String>> map = new HashMap<String,List<String>>();
     map.put("key", Arrays.asList("val1","val2"));
     final TestListInMap mapList = new TestListInMap("maplist", map);
-    final Path fileToCreate = createFile(mapList);
+    final Path fileToCreate = createFile(null, mapList);
 
     ParquetReader<Group> reader = createRecordReader(fileToCreate);
 
     Group g = null;
     while((g = reader.read()) != null) {
       assertEquals("key",
-          g.getGroup("names", 0).getGroup("map", 0).getBinary("key", 0).toStringUsingUTF8());
+          g.getGroup("names", 0).getGroup("map",0).getBinary("key", 0).toStringUsingUTF8());
       assertEquals(map.get("key").size(),
-          g.getGroup("names", 0).getGroup("map", 0).getGroup("value", 0).getFieldRepetitionCount(0));
+          g.getGroup("names", 0).getGroup("map",0).getGroup("value", 0).getFieldRepetitionCount(0));
     }
   }
 
@@ -241,7 +241,7 @@ public class TestThriftToParquetFileWriter {
     Map<List<String>, List<String>> map = new HashMap<List<String>,List<String>>();
     map.put(Arrays.asList("key1","key2"), Arrays.asList("val1","val2"));
     final TestListsInMap mapList = new TestListsInMap("maplists", map);
-    final Path fileToCreate = createFile(mapList);
+    final Path fileToCreate = createFile(null, mapList);
 
     ParquetReader<Group> reader = createRecordReader(fileToCreate);
 
@@ -252,9 +252,9 @@ public class TestThriftToParquetFileWriter {
       assertEquals("key2",
           g.getGroup("names", 0).getGroup("map",0).getGroup("key", 0).getBinary("key_tuple", 1).toStringUsingUTF8());
       assertEquals("val1",
-          g.getGroup("names", 0).getGroup("map", 0).getGroup("value", 0).getBinary("value_tuple", 0).toStringUsingUTF8());
+          g.getGroup("names", 0).getGroup("map",0).getGroup("value", 0).getBinary("value_tuple", 0).toStringUsingUTF8());
       assertEquals("val2",
-          g.getGroup("names", 0).getGroup("map", 0).getGroup("value", 0).getBinary("value_tuple", 1).toStringUsingUTF8());
+          g.getGroup("names", 0).getGroup("map",0).getGroup("value", 0).getBinary("value_tuple", 1).toStringUsingUTF8());
     }
   }
 
@@ -270,7 +270,7 @@ public class TestThriftToParquetFileWriter {
                 Arrays.asList(new PhoneNumber("1234567890")))));
 
     Configuration conf = new Configuration();
-    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    conf.set(ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS, "true");
 
     final Path fileToCreate = createFile(conf, a);
 
@@ -301,7 +301,7 @@ public class TestThriftToParquetFileWriter {
         Arrays.asList(map1, map2));
 
     Configuration conf = new Configuration();
-    conf.set(WRITE_THREE_LEVEL_LISTS, "true");
+    conf.set(ParquetWriteProtocol.WRITE_THREE_LEVEL_LISTS, "true");
 
     final Path fileToCreate = createFile(conf, listMap);
 
@@ -329,10 +329,6 @@ public class TestThriftToParquetFileWriter {
 
     readSupport.init(configuration, null, schema);
     return new ParquetReader<Group>(parquetFilePath, readSupport);
-  }
-
-  private <T extends TBase<?,?>> Path createFile(T... tObjs) throws IOException, InterruptedException, TException  {
-    return createFile(null, tObjs);
   }
 
   private <T extends TBase<?,?>> Path createFile(Configuration conf, T... tObjs)

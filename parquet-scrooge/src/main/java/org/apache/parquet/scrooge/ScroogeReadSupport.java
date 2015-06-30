@@ -39,12 +39,6 @@ public class ScroogeReadSupport extends ThriftReadSupport{
   }
 
   @Override
-  protected MessageType getProjectedSchema(FieldProjectionFilter fieldProjectionFilter) {
-    ThriftType.StructType thriftStruct = new ScroogeStructConverter().convert(thriftClass);
-    return new ThriftSchemaConverter(fieldProjectionFilter).convert(thriftStruct);
-  }
-
-  @Override
   protected MessageType getProjectedSchema(Configuration configuration, FieldProjectionFilter fieldProjectionFilter) {
     ThriftType.StructType thriftStruct = new ScroogeStructConverter().convert(thriftClass);
     return new ThriftSchemaConverter(configuration, fieldProjectionFilter).convert(thriftStruct);
