@@ -96,6 +96,15 @@ public class ThriftSchemaConvertVisitor implements ThriftType.TypeVisitor<Conver
     }
   }
 
+  @Deprecated
+  /**
+   * @deprecated Use @link{convert(Configuration conf, StructType struct,
+   * FieldProjectionFilter filter)} instead
+   */
+  public static MessageType convert(StructType struct, FieldProjectionFilter filter) {
+    return convert(null, struct, filter);
+  }
+
   public static MessageType convert(
       Configuration conf, StructType struct, FieldProjectionFilter filter) {
     State state = new State(new FieldsPath(), REPEATED, "ParquetSchema");

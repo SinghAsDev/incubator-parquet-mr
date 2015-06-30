@@ -76,4 +76,18 @@ public class ParquetThriftBytesOutputFormat extends ParquetOutputFormat<BytesWri
         configuration, protocolFactory, thriftClass, buffered, errorHandler));
   }
 
+  @Deprecated
+  /**
+   * @deprecated Use @link{ParquetThriftBytesOutputFormat(
+   * Configuration configuration, TProtocolFactory protocolFactory,
+   * Class<? extends TBase<?, ?>> thriftClass, boolean buffered,
+   * FieldIgnoredHandler errorHandler)} instead
+   */
+  public ParquetThriftBytesOutputFormat(TProtocolFactory protocolFactory,
+                                        Class<? extends TBase<?, ?>> thriftClass,
+                                        boolean buffered,
+                                        FieldIgnoredHandler errorHandler) {
+    this(null, protocolFactory, thriftClass, buffered, errorHandler);
+  }
+
 }

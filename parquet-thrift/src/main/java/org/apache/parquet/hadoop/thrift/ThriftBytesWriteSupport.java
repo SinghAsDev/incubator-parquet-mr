@@ -82,6 +82,19 @@ public class ThriftBytesWriteSupport extends WriteSupport<BytesWritable> {
     this.errorHandler = null;
   }
 
+  @Deprecated
+  /**
+   * @deprecated Use @link{ThriftBytesWriteSupport(Configuration configuration,
+   * TProtocolFactory protocolFactory, Class<? extends TBase<?, ?>> thriftClass,
+   * boolean buffered, FieldIgnoredHandler errorHandler)} instead
+   */
+  public ThriftBytesWriteSupport(TProtocolFactory protocolFactory,
+                                 Class<? extends TBase<?, ?>> thriftClass,
+                                 boolean buffered,
+                                 FieldIgnoredHandler errorHandler) {
+    this(null, protocolFactory, thriftClass, buffered, errorHandler);
+  }
+
   public ThriftBytesWriteSupport(
       Configuration configuration,
       TProtocolFactory protocolFactory,
