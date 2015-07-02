@@ -173,7 +173,8 @@ public class ParquetMetadataConverter {
           columnMetaData.getFirstDataPageOffset());
       columnChunk.meta_data.dictionary_page_offset = columnMetaData.getDictionaryPageOffset();
       if (!columnMetaData.getStatistics().isEmpty()) {
-        columnChunk.meta_data.setStatistics(toParquetStatistics(columnMetaData.getStatistics()));
+        columnChunk.meta_data.setStatistics(
+            ParquetStatisticsConverter.toParquetStatistics(columnMetaData.getStatistics()));
       }
 //      columnChunk.meta_data.index_page_offset = ;
 //      columnChunk.meta_data.key_value_metadata = ; // nothing yet
@@ -200,17 +201,13 @@ public class ParquetMetadataConverter {
     return ParquetEncodingConverter.getEncoding(encoding);
   }
 
+  @Deprecated
+  /**
+   * @deprecated Use {@link #ParquetStatisticsConverter.toParquetStatistics} instead
+   */
   public static Statistics toParquetStatistics(
       org.apache.parquet.column.statistics.Statistics statistics) {
-    Statistics stats = new Statistics();
-    if (!statistics.isEmpty()) {
-      stats.setNull_count(statistics.getNumNulls());
-      if (statistics.hasNonNullValue()) {
-        stats.setMax(statistics.getMaxBytes());
-        stats.setMin(statistics.getMinBytes());
-      }
-    }
-    return stats;
+    return ParquetStatisticsConverter.toParquetStatistics(statistics);
   }
   /**
    * @deprecated Replaced by {@link #fromParquetStatistics(
@@ -218,23 +215,16 @@ public class ParquetMetadataConverter {
    */
   @Deprecated
   public static org.apache.parquet.column.statistics.Statistics fromParquetStatistics(Statistics statistics, PrimitiveTypeName type) {
-    return fromParquetStatistics(null, statistics, type);
+    return ParquetStatisticsConverter.fromParquetStatistics(null, statistics, type);
   }
 
+  @Deprecated
+  /**
+   * @deprecated Use {@link #ParquetStatisticsConverter.fromParquetStatistics} instead
+   */
   public static org.apache.parquet.column.statistics.Statistics fromParquetStatistics
       (String createdBy, Statistics statistics, PrimitiveTypeName type) {
-    // create stats object based on the column type
-    org.apache.parquet.column.statistics.Statistics stats = org.apache.parquet.column.statistics.Statistics.getStatsBasedOnType(type);
-    // If there was no statistics written to the footer, create an empty Statistics object and return
-
-    // NOTE: See docs in CorruptStatistics for explanation of why this check is needed
-    if (statistics != null && !CorruptStatistics.shouldIgnoreStatistics(createdBy, type)) {
-      if (statistics.isSetMax() && statistics.isSetMin()) {
-        stats.setMinMaxFromBytes(statistics.min.array(), statistics.max.array());
-      }
-      stats.setNumNulls(statistics.null_count);
-    }
-    return stats;
+    return ParquetStatisticsConverter.fromParquetStatistics(createdBy, statistics, type);
   }
 
   public PrimitiveTypeName getPrimitive(Type type) {
@@ -537,7 +527,7 @@ public class ParquetMetadataConverter {
               messageType.getType(path.toArray()).asPrimitiveType().getPrimitiveTypeName(),
               CompressionCodecName.fromParquet(metaData.codec),
               ParquetEncodingConverter.fromFormatEncodings(metaData.encodings),
-              fromParquetStatistics(
+              ParquetStatisticsConverter.fromParquetStatistics(
                   parquetMetadata.getCreated_by(),
                   metaData.statistics,
                   messageType.getType(path.toArray()).asPrimitiveType().getPrimitiveTypeName()),
@@ -679,7 +669,7 @@ public class ParquetMetadataConverter {
         ParquetEncodingConverter.getEncoding(rlEncoding)));
     if (!statistics.isEmpty()) {
       pageHeader.getData_page_header().setStatistics(
-          toParquetStatistics(statistics));
+          ParquetStatisticsConverter.toParquetStatistics(statistics));
     }
     return pageHeader;
   }
@@ -713,7 +703,7 @@ public class ParquetMetadataConverter {
         dlByteLength, rlByteLength);
     if (!statistics.isEmpty()) {
       dataPageHeaderV2.setStatistics(
-          toParquetStatistics(statistics));
+          ParquetStatisticsConverter.toParquetStatistics(statistics));
     }
     PageHeader pageHeader = new PageHeader(PageType.DATA_PAGE_V2, uncompressedSize, compressedSize);
     pageHeader.setData_page_header_v2(dataPageHeaderV2);
