@@ -61,6 +61,7 @@ import org.apache.parquet.column.page.DataPageV1;
 import org.apache.parquet.column.page.DataPageV2;
 import org.apache.parquet.column.page.DictionaryPage;
 import org.apache.parquet.column.page.PageReadStore;
+import org.apache.parquet.format.converter.ParquetEncodingConverter;
 import org.apache.parquet.hadoop.metadata.ColumnPath;
 import org.apache.parquet.format.DataPageHeader;
 import org.apache.parquet.format.DataPageHeaderV2;
@@ -575,7 +576,7 @@ public class ParquetFileReader implements Closeable {
                     this.readAsBytesInput(compressedPageSize),
                     uncompressedPageSize,
                     dicHeader.getNum_values(),
-                    converter.getEncoding(dicHeader.getEncoding())
+                    ParquetEncodingConverter.getEncoding(dicHeader.getEncoding())
                     );
             break;
           case DATA_PAGE:
@@ -589,9 +590,9 @@ public class ParquetFileReader implements Closeable {
                         createdBy,
                         dataHeaderV1.getStatistics(),
                         descriptor.col.getType()),
-                    converter.getEncoding(dataHeaderV1.getRepetition_level_encoding()),
-                    converter.getEncoding(dataHeaderV1.getDefinition_level_encoding()),
-                    converter.getEncoding(dataHeaderV1.getEncoding())
+                    ParquetEncodingConverter.getEncoding(dataHeaderV1.getRepetition_level_encoding()),
+                    ParquetEncodingConverter.getEncoding(dataHeaderV1.getDefinition_level_encoding()),
+                    ParquetEncodingConverter.getEncoding(dataHeaderV1.getEncoding())
                     ));
             valuesCountReadSoFar += dataHeaderV1.getNum_values();
             break;
@@ -605,7 +606,7 @@ public class ParquetFileReader implements Closeable {
                     dataHeaderV2.getNum_values(),
                     this.readAsBytesInput(dataHeaderV2.getRepetition_levels_byte_length()),
                     this.readAsBytesInput(dataHeaderV2.getDefinition_levels_byte_length()),
-                    converter.getEncoding(dataHeaderV2.getEncoding()),
+                    ParquetEncodingConverter.getEncoding(dataHeaderV2.getEncoding()),
                     this.readAsBytesInput(dataSize),
                     uncompressedPageSize,
                     fromParquetStatistics(

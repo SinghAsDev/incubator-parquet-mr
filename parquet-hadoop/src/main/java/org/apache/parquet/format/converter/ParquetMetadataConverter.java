@@ -78,14 +78,6 @@ public class ParquetMetadataConverter {
 
   private static final Log LOG = Log.getLog(ParquetMetadataConverter.class);
 
-  // NOTE: this cache is for memory savings, not cpu savings, and is used to de-duplicate
-  // sets of encodings. It is important that all collections inserted to this cache be
-  // immutable and have thread-safe read-only access. This can be achieved by wrapping
-  // an unsynchronized collection in Collections.unmodifiable*(), and making sure to not
-  // keep any references to the original collection.
-  private static final ConcurrentHashMap<Set<org.apache.parquet.column.Encoding>, Set<org.apache.parquet.column.Encoding>>
-      cachedEncodingSets = new ConcurrentHashMap<Set<org.apache.parquet.column.Encoding>, Set<org.apache.parquet.column.Encoding>>();
-
   public FileMetaData toParquetMetadata(int currentVersion, ParquetMetadata parquetMetadata) {
     List<BlockMetaData> blocks = parquetMetadata.getBlocks();
     List<RowGroup> rowGroups = new ArrayList<RowGroup>();
@@ -172,7 +164,7 @@ public class ParquetMetadataConverter {
       columnChunk.file_path = block.getPath(); // they are in the same file for now
       columnChunk.meta_data = new ColumnMetaData(
           getType(columnMetaData.getType()),
-          toFormatEncodings(columnMetaData.getEncodings()),
+          ParquetEncodingConverter.toFormatEncodings(columnMetaData.getEncodings()),
           Arrays.asList(columnMetaData.getPath().toArray()),
           columnMetaData.getCodec().getParquetCompressionCodec(),
           columnMetaData.getValueCount(),
@@ -192,44 +184,20 @@ public class ParquetMetadataConverter {
     rowGroups.add(rowGroup);
   }
 
-  private List<Encoding> toFormatEncodings(Set<org.apache.parquet.column.Encoding> encodings) {
-    List<Encoding> converted = new ArrayList<Encoding>(encodings.size());
-    for (org.apache.parquet.column.Encoding encoding : encodings) {
-      converted.add(getEncoding(encoding));
-    }
-    return converted;
-  }
-
-  // Visible for testing
-  Set<org.apache.parquet.column.Encoding> fromFormatEncodings(List<Encoding> encodings) {
-    Set<org.apache.parquet.column.Encoding> converted = new HashSet<org.apache.parquet.column.Encoding>();
-
-    for (Encoding encoding : encodings) {
-      converted.add(getEncoding(encoding));
-    }
-
-    // make converted unmodifiable, drop reference to modifiable copy
-    converted = Collections.unmodifiableSet(converted);
-
-    // atomically update the cache
-    Set<org.apache.parquet.column.Encoding> cached = cachedEncodingSets.putIfAbsent(converted, converted);
-
-    if (cached == null) {
-      // cached == null signifies that converted was *not* in the cache previously
-      // so we can return converted instead of throwing it away, it has now
-      // been cached
-      cached = converted;
-    }
-
-    return cached;
-  }
-
+  @Deprecated
+  /**
+   * Use @link{ParquetEncodingConverter.getEncoding} instead.
+   */
   public org.apache.parquet.column.Encoding getEncoding(Encoding encoding) {
-    return org.apache.parquet.column.Encoding.valueOf(encoding.name());
+    return ParquetEncodingConverter.getEncoding(encoding);
   }
 
+  @Deprecated
+  /**
+   * Use @link{ParquetEncodingConverter.getEncoding} instead.
+   */
   public Encoding getEncoding(org.apache.parquet.column.Encoding encoding) {
-    return Encoding.valueOf(encoding.name());
+    return ParquetEncodingConverter.getEncoding(encoding);
   }
 
   public static Statistics toParquetStatistics(
@@ -568,7 +536,7 @@ public class ParquetMetadataConverter {
               path,
               messageType.getType(path.toArray()).asPrimitiveType().getPrimitiveTypeName(),
               CompressionCodecName.fromParquet(metaData.codec),
-              fromFormatEncodings(metaData.encodings),
+              ParquetEncodingConverter.fromFormatEncodings(metaData.encodings),
               fromParquetStatistics(
                   parquetMetadata.getCreated_by(),
                   metaData.statistics,
@@ -706,9 +674,9 @@ public class ParquetMetadataConverter {
     // TODO: pageHeader.crc = ...;
     pageHeader.setData_page_header(new DataPageHeader(
         valueCount,
-        getEncoding(valuesEncoding),
-        getEncoding(dlEncoding),
-        getEncoding(rlEncoding)));
+        ParquetEncodingConverter.getEncoding(valuesEncoding),
+        ParquetEncodingConverter.getEncoding(dlEncoding),
+        ParquetEncodingConverter.getEncoding(rlEncoding)));
     if (!statistics.isEmpty()) {
       pageHeader.getData_page_header().setStatistics(
           toParquetStatistics(statistics));
@@ -741,7 +709,7 @@ public class ParquetMetadataConverter {
     // TODO: pageHeader.crc = ...;
     DataPageHeaderV2 dataPageHeaderV2 = new DataPageHeaderV2(
         valueCount, nullCount, rowCount,
-        getEncoding(dataEncoding),
+        ParquetEncodingConverter.getEncoding(dataEncoding),
         dlByteLength, rlByteLength);
     if (!statistics.isEmpty()) {
       dataPageHeaderV2.setStatistics(
@@ -756,7 +724,8 @@ public class ParquetMetadataConverter {
       int uncompressedSize, int compressedSize, int valueCount,
       org.apache.parquet.column.Encoding valuesEncoding, OutputStream to) throws IOException {
     PageHeader pageHeader = new PageHeader(PageType.DICTIONARY_PAGE, uncompressedSize, compressedSize);
-    pageHeader.setDictionary_page_header(new DictionaryPageHeader(valueCount, getEncoding(valuesEncoding)));
+    pageHeader.setDictionary_page_header(
+        new DictionaryPageHeader(valueCount, ParquetEncodingConverter.getEncoding(valuesEncoding)));
     writePageHeader(pageHeader, to);
   }
 

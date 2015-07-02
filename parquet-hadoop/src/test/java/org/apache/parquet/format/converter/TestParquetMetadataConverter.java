@@ -127,10 +127,12 @@ public class TestParquetMetadataConverter {
   public void testEnumEquivalence() {
     ParquetMetadataConverter parquetMetadataConverter = new ParquetMetadataConverter();
     for (org.apache.parquet.column.Encoding encoding : org.apache.parquet.column.Encoding.values()) {
-      assertEquals(encoding, parquetMetadataConverter.getEncoding(parquetMetadataConverter.getEncoding(encoding)));
+      assertEquals(encoding, ParquetEncodingConverter.getEncoding(
+          ParquetEncodingConverter.getEncoding(encoding)));
     }
     for (org.apache.parquet.format.Encoding encoding : org.apache.parquet.format.Encoding.values()) {
-      assertEquals(encoding, parquetMetadataConverter.getEncoding(parquetMetadataConverter.getEncoding(encoding)));
+      assertEquals(encoding, ParquetEncodingConverter.getEncoding(
+          ParquetEncodingConverter.getEncoding(encoding)));
     }
     for (Repetition repetition : Repetition.values()) {
       assertEquals(repetition, parquetMetadataConverter.fromParquetRepetition(parquetMetadataConverter.toParquetRepetition(repetition)));
@@ -303,9 +305,12 @@ public class TestParquetMetadataConverter {
     expected.add(org.apache.parquet.column.Encoding.RLE_DICTIONARY);
     expected.add(org.apache.parquet.column.Encoding.DELTA_LENGTH_BYTE_ARRAY);
 
-    Set<org.apache.parquet.column.Encoding> res1 = parquetMetadataConverter.fromFormatEncodings(formatEncodingsCopy1);
-    Set<org.apache.parquet.column.Encoding> res2 = parquetMetadataConverter.fromFormatEncodings(formatEncodingsCopy1);
-    Set<org.apache.parquet.column.Encoding> res3 = parquetMetadataConverter.fromFormatEncodings(formatEncodingsCopy2);
+    Set<org.apache.parquet.column.Encoding> res1 = ParquetEncodingConverter.
+        fromFormatEncodings(formatEncodingsCopy1);
+    Set<org.apache.parquet.column.Encoding> res2 = ParquetEncodingConverter.
+        fromFormatEncodings(formatEncodingsCopy1);
+    Set<org.apache.parquet.column.Encoding> res3 = ParquetEncodingConverter.
+        fromFormatEncodings(formatEncodingsCopy2);
 
     // make sure they are all semantically equal
     assertEquals(expected, res1);
